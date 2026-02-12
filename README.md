@@ -76,6 +76,7 @@ The entire application is a **single self-contained file**. There are no folders
 physviz/
 ├── physviz.html     ← The entire application lives here
 └── README.md        ← This file
+
 **⚠️ Known Issues / Limitations:-**
 Since PhysViz is an MVP built during a hackathon, there are a few known limitations to be aware of. The API key is embedded client-side in the HTML file, which means it is visible to anyone who views the page source — this is acceptable for demos but must be fixed before any public deployment. The AI parser works best with clean, well-structured problem statements; ambiguous or very complex multi-body problems may not be parsed correctly or may fall back to a default simulation. The app currently supports only 8 simulation types, so problems outside these categories (e.g. rotational dynamics, thermodynamics, or wave optics) will not produce a meaningful visualization. Additionally, since all rendering happens on a single HTML Canvas, very fast simulations may appear choppy on low-end devices or older browsers. There is also no offline mode — without an internet connection, the AI parsing feature does not work at all.
 
