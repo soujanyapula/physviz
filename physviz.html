@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhysViz - AI Physics Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=IBM+Plex+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00ff88;
+            --secondary: #0080ff;
+            --dark: #0a0e1a;
+            --darker: #050810;
+            --surface: #131824;
+            --surface-light: #1a2234;
+            --text: #e8f4ff;
+            --text-dim: #8fa3bf;
+            --accent: #ff00ff;
+            --warning: #ffaa00;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'IBM Plex Mono', monospace;
+            background: var(--darker);
+            color: var(--text);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(0,255,136,0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0,128,255,0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(255,0,255,0.03) 0%, transparent 40%);
+            animation: gradientShift 15s ease infinite;
+            pointer-events: none; z-index: 0;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.1); }
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none; z-index: 0;
+        }
+
+        .container { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 2rem; }
+
+        header {
+            text-align: center;
+            padding: 3rem 0 2rem;
+            border-bottom: 2px solid var(--surface);
+            margin-bottom: 3rem;
+            animation: slideDown 0.8s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo-section {
+            display: flex; justify-content: center; align-items: center;
+            gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap;
+        }
+
+        .logo-text { font-family: 'Orbitron', sans-serif; font-size: 1rem; font-weight: 700; color: var(--text-dim); letter-spacing: 2px; }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 4rem; font-weight: 900;
+            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
+            background-size: 200% 200%;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            animation: gradientMove 8s ease infinite;
+            margin-bottom: 1rem; letter-spacing: -2px;
+        }
+
+        @keyframes gradientMove {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .subtitle { font-size: 1.1rem; color: var(--text-dim); font-weight: 300; letter-spacing: 1px; }
+        .subtitle span { color: var(--primary); font-weight: 600; }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 2rem; margin-bottom: 2rem;
+            animation: fadeIn 1s ease 0.3s both;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .input-section {
+            background: var(--surface);
+            border: 1px solid var(--surface-light);
+            border-radius: 12px; padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            position: relative; overflow: hidden;
+        }
+
+        .input-section::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            animation: shimmer 3s ease infinite;
+        }
+
+        @keyframes shimmer { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif; font-size: 1.5rem; font-weight: 700;
+            color: var(--primary); margin-bottom: 1.5rem;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+
+        .section-title::before { content: '▸'; font-size: 1.2rem; }
+
+        label {
+            display: block; margin-bottom: 0.5rem;
+            color: var(--text-dim); font-size: 0.9rem;
+            font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        textarea {
+            width: 100%; min-height: 160px;
+            background: var(--dark); border: 2px solid var(--surface-light);
+            border-radius: 8px; padding: 1rem;
+            color: var(--text); font-family: 'IBM Plex Mono', monospace;
+            font-size: 1rem; resize: vertical; transition: all 0.3s ease;
+        }
+
+        textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,255,136,0.1); }
+        textarea::placeholder { color: var(--text-dim); opacity: 0.5; }
+
+        .button-group { display: flex; gap: 1rem; margin-top: 1.5rem; }
+
+        button {
+            flex: 1; padding: 1rem 2rem;
+            font-family: 'Orbitron', sans-serif; font-size: 1rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1px;
+            border: none; border-radius: 8px; cursor: pointer;
+            transition: all 0.3s ease; position: relative; overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--dark); box-shadow: 0 4px 15px rgba(0,255,136,0.4);
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(0,255,136,0.6); }
+        .btn-primary:active { transform: translateY(0); }
+
+        .btn-secondary { background: var(--surface-light); color: var(--text); border: 2px solid var(--surface-light); }
+        .btn-secondary:hover { border-color: var(--primary); background: var(--dark); }
+
+        /* ── NEW: Parsed Parameters UI ── */
+        .parsed-params {
+            background: var(--dark);
+            border: 1px solid var(--surface-light);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-top: 1.25rem;
+            display: none;
+        }
+
+        .parsed-params.show { display: block; }
+
+        .parsed-params-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem; color: var(--secondary);
+            text-transform: uppercase; letter-spacing: 1.5px;
+            margin-bottom: 0.75rem;
+        }
+
+        .param-row {
+            display: flex; align-items: center;
+            gap: 0.75rem; margin-bottom: 0.6rem;
+        }
+
+        .param-row label {
+            margin: 0; min-width: 130px;
+            font-size: 0.8rem; color: var(--text-dim);
+            text-transform: none; letter-spacing: 0;
+        }
+
+        .param-row input[type="number"] {
+            background: var(--surface);
+            border: 1.5px solid var(--surface-light);
+            border-radius: 6px;
+            color: var(--primary);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem; font-weight: 700;
+            padding: 0.3rem 0.6rem;
+            width: 90px;
+            transition: border-color 0.2s;
+        }
+
+        .param-row input[type="number"]:focus {
+            outline: none; border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(0,255,136,0.15);
+        }
+
+        .param-row .param-unit {
+            color: var(--text-dim); font-size: 0.8rem; min-width: 40px;
+        }
+
+        .param-apply-btn {
+            flex: unset; width: 100%; padding: 0.55rem 1rem;
+            font-size: 0.8rem; margin-top: 0.5rem;
+            background: rgba(0,255,136,0.1);
+            color: var(--primary); border: 1.5px solid var(--primary);
+            border-radius: 6px; cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            transition: all 0.2s;
+        }
+
+        .param-apply-btn:hover { background: rgba(0,255,136,0.2); transform: none; }
+
+        /* ── Examples ── */
+        .examples { margin-top: 1.5rem; }
+
+        .example-chips { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; }
+
+        .chip {
+            padding: 0.5rem 1rem;
+            background: var(--dark); border: 1px solid var(--surface-light);
+            border-radius: 20px; font-size: 0.85rem; color: var(--text-dim);
+            cursor: pointer; transition: all 0.3s ease;
+        }
+
+        .chip:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-2px); }
+
+        /* ── Visualization ── */
+        .viz-section {
+            background: var(--surface);
+            border: 1px solid var(--surface-light);
+            border-radius: 12px; padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            min-height: 600px;
+            display: flex; flex-direction: column;
+        }
+
+        #canvas-container {
+            flex: 1; background: var(--dark);
+            border-radius: 8px; border: 2px solid var(--surface-light);
+            position: relative; min-height: 400px;
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+        }
+
+        .placeholder { text-align: center; color: var(--text-dim); padding: 3rem; }
+        .placeholder-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.3; }
+
+        /* ── Controls ── */
+        .controls {
+            margin-top: 2rem; padding-top: 2rem;
+            border-top: 1px solid var(--surface-light);
+        }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { margin-bottom: 0.75rem; }
+
+        .slider-container { display: flex; align-items: center; gap: 1rem; }
+
+        input[type="range"] {
+            flex: 1; -webkit-appearance: none; appearance: none;
+            height: 6px; background: var(--dark); border-radius: 3px; outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 20px; height: 20px;
+            background: var(--primary); border-radius: 50%; cursor: pointer;
+            box-shadow: 0 0 10px rgba(0,255,136,0.5); transition: all 0.3s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); box-shadow: 0 0 15px rgba(0,255,136,0.8); }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px; height: 20px; background: var(--primary);
+            border-radius: 50%; cursor: pointer; border: none;
+            box-shadow: 0 0 10px rgba(0,255,136,0.5);
+        }
+
+        .value-display {
+            min-width: 80px; padding: 0.5rem 1rem;
+            background: var(--dark); border-radius: 6px;
+            text-align: center; font-family: 'Orbitron', sans-serif;
+            color: var(--primary); font-weight: 700;
+        }
+
+        .play-controls { display: flex; gap: 1rem; margin-top: 1rem; }
+
+        .btn-icon {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        /* ── Info & Equations ── */
+        .info-panel {
+            background: var(--surface); border: 1px solid var(--surface-light);
+            border-radius: 12px; padding: 2rem; margin-top: 2rem;
+            animation: fadeIn 1s ease 0.6s both;
+        }
+
+        .info-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem; margin-top: 1.5rem;
+        }
+
+        .info-card {
+            background: var(--dark); padding: 1.5rem;
+            border-radius: 8px; border-left: 3px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .info-card:hover { transform: translateX(5px); border-left-color: var(--secondary); }
+        .info-card h4 { font-family: 'Orbitron', sans-serif; color: var(--primary); margin-bottom: 0.5rem; font-size: 0.9rem; }
+        .info-card p { color: var(--text-dim); font-size: 0.85rem; }
+
+        /* ── Loading ── */
+        .loading { display: none; text-align: center; padding: 2rem; }
+        .loading.active { display: block; }
+
+        .spinner {
+            width: 50px; height: 50px; margin: 0 auto 1rem;
+            border: 3px solid var(--surface-light); border-top-color: var(--primary);
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        canvas { max-width: 100%; max-height: 100%; }
+
+        /* ── Status ── */
+        .status-message {
+            padding: 1rem; border-radius: 8px; margin-top: 1rem;
+            display: none; animation: slideInRight 0.3s ease;
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .status-message.show { display: block; }
+        .status-message.success { background: rgba(0,255,136,0.1); border: 1px solid var(--primary); color: var(--primary); }
+        .status-message.error { background: rgba(255,0,0,0.1); border: 1px solid #ff4444; color: #ff6666; }
+
+        footer {
+            text-align: center; padding: 3rem 0; margin-top: 4rem;
+            border-top: 1px solid var(--surface); color: var(--text-dim); font-size: 0.9rem;
+        }
+
+        footer a { color: var(--primary); text-decoration: none; transition: color 0.3s ease; }
+        footer a:hover { color: var(--secondary); }
+
+        .equations-container { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.5rem; }
+
+        .equation-card, .calculations-card {
+            background: var(--dark); padding: 2rem;
+            border-radius: 8px; border: 1px solid var(--surface-light);
+        }
+
+        .equation-card h3, .calculations-card h3 {
+            font-family: 'Orbitron', sans-serif; color: var(--secondary);
+            margin-bottom: 1.5rem; font-size: 1.2rem;
+        }
+
+        .equation-item {
+            background: var(--surface); padding: 1.5rem;
+            border-radius: 6px; margin-bottom: 1rem;
+            border-left: 3px solid var(--primary); transition: all 0.3s ease;
+        }
+
+        .equation-item:hover { transform: translateX(5px); border-left-color: var(--secondary); }
+        .equation-label { font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; }
+
+        .equation-formula {
+            font-family: 'Orbitron', sans-serif; font-size: 1.3rem;
+            color: var(--primary); margin: 1rem 0; padding: 0.75rem;
+            background: rgba(0,255,136,0.05); border-radius: 4px; text-align: center;
+        }
+
+        .equation-description { font-size: 0.9rem; color: var(--text-dim); line-height: 1.6; }
+
+        .calculation-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.75rem 0; border-bottom: 1px solid var(--surface-light);
+        }
+
+        .calculation-row:last-child { border-bottom: none; }
+        .calc-label { color: var(--text-dim); font-size: 0.95rem; }
+        .calc-value { font-family: 'Orbitron', sans-serif; color: var(--primary); font-weight: 700; font-size: 1.1rem; }
+
+        .calc-highlight {
+            background: rgba(0,255,136,0.1); padding: 1rem;
+            border-radius: 6px; margin-top: 1rem;
+            border: 1px solid rgba(0,255,136,0.3);
+        }
+
+        .calc-highlight .calc-label { color: var(--primary); font-weight: 600; }
+
+        @media (max-width: 968px) {
+            .main-grid { grid-template-columns: 1fr; }
+            h1 { font-size: 2.5rem; }
+            .logo-section { flex-direction: column; gap: 1rem; }
+            .equations-container { grid-template-columns: 1fr; }
+        }
+
+        *:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+        /* ── Live pulse on slider change ── */
+        .slider-container input[type="range"]:active + .value-display {
+            border: 1px solid var(--primary);
+            box-shadow: 0 0 8px rgba(0,255,136,0.5);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>PHYSVIZ</h1>
+        <p class="subtitle">AI-Powered <span>Physics Problem</span> Visualizer</p>
+    </header>
+
+    <div class="main-grid">
+        <!-- Input Section -->
+        <div class="input-section">
+            <h2 class="section-title">Problem Input</h2>
+            <label for="problem-input">Enter Physics Word Problem</label>
+            <textarea id="problem-input" placeholder="Example: A ball is thrown at 20 m/s at an angle of 45 degrees. Show the trajectory."></textarea>
+
+            <div class="button-group">
+                <button class="btn-primary" id="visualize-btn">⚡ Visualize</button>
+                <button class="btn-secondary" id="clear-btn">Clear</button>
+            </div>
+
+            <div id="status-message" class="status-message"></div>
+
+            <!-- ── LIVE PARAMETER EDITOR ── -->
+            <div class="parsed-params" id="parsed-params">
+                <div class="parsed-params-title">⚙ Live Parameters — edit &amp; hit Apply</div>
+                <div id="param-fields"></div>
+                <button class="param-apply-btn" id="param-apply-btn">↺ Apply &amp; Restart Simulation</button>
+            </div>
+
+            <div class="examples">
+                <label>Example Problems</label>
+                <div class="example-chips">
+                    <div class="chip" data-problem="A ball is thrown straight up with a speed of 15 m/s. Visualize the motion of the ball.">Vertical Projectile</div>
+                    <div class="chip" data-problem="A ball is thrown at 20 m/s at an angle of 45 degrees. Show the trajectory.">Angled Projectile</div>
+                    <div class="chip" data-problem="Two cars start from rest. Car A accelerates at 2 m/s² and Car B at 3 m/s². Visualize their motion.">Linear Motion</div>
+                    <div class="chip" data-problem="A pendulum of length 1.5 meters swings with initial angle 30 degrees. Show the oscillation.">Simple Pendulum</div>
+                    <div class="chip" data-problem="A block of mass 5 kg slides down a frictionless incline of angle 30 degrees. Visualize the motion.">Inclined Plane</div>
+                    <div class="chip" data-problem="A spring with constant 100 N/m is stretched by 0.2 meters and released. Show the oscillation.">Spring Oscillation</div>
+                    <div class="chip" data-problem="An object falls freely from a height of 50 meters. Visualize its motion.">Free Fall</div>
+                    <div class="chip" data-problem="Two objects collide elastically with masses 2 kg and 3 kg moving at 5 m/s and 2 m/s. Show collision.">Elastic Collision</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualization Section -->
+        <div class="viz-section">
+            <h2 class="section-title">Simulation Canvas</h2>
+
+            <div id="canvas-container">
+                <div class="placeholder">
+                    <div class="placeholder-icon">📊</div>
+                    <p>Enter a physics problem and click <strong>Visualize</strong><br>to see the simulation here</p>
+                </div>
+                <canvas id="physics-canvas" style="display:none;"></canvas>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing problem and generating simulation...</p>
+                </div>
+            </div>
+
+            <!-- Simulation Controls -->
+            <div class="controls" id="controls" style="display:none;">
+                <h3 class="section-title">Adjust Parameters</h3>
+
+                <div class="control-group">
+                    <label for="param1" id="label-param1">Initial Velocity (m/s)</label>
+                    <div class="slider-container">
+                        <input type="range" id="param1" min="0" max="30" value="10" step="0.5">
+                        <span class="value-display" id="param1-value">10 m/s</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="param2" id="label-param2">Angle (degrees)</label>
+                    <div class="slider-container">
+                        <input type="range" id="param2" min="0" max="90" value="90" step="1">
+                        <span class="value-display" id="param2-value">90°</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="param3">Time Scale</label>
+                    <div class="slider-container">
+                        <input type="range" id="param3" min="0.1" max="3" value="1" step="0.1">
+                        <span class="value-display" id="param3-value">1.0x</span>
+                    </div>
+                </div>
+
+                <div class="play-controls">
+                    <button class="btn-primary btn-icon" id="play-btn" title="Play">▶</button>
+                    <button class="btn-secondary btn-icon" id="pause-btn" title="Pause">⏸</button>
+                    <button class="btn-secondary btn-icon" id="reset-btn" title="Reset">⟲</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Equations and Calculations Panel -->
+    <div class="info-panel" id="equations-panel" style="display:none;">
+        <h2 class="section-title">Physics Equations &amp; Calculations</h2>
+        <div class="equations-container">
+            <div class="equation-card">
+                <h3>Governing Equations</h3>
+                <div id="equations-display"></div>
+            </div>
+            <div class="calculations-card">
+                <h3>Live Calculations</h3>
+                <div id="calculations-display"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Panel -->
+    <div class="info-panel">
+        <h2 class="section-title">About PhysViz</h2>
+        <div class="info-grid">
+            <div class="info-card">
+                <h4>🤖 AI-Powered Understanding</h4>
+                <p>Natural language processing extracts entities, parameters, and physics concepts from problem statements</p>
+            </div>
+            <div class="info-card">
+                <h4>🎨 Dynamic Visualization</h4>
+                <p>Automatically generates interactive visual simulations based on problem context</p>
+            </div>
+            <div class="info-card">
+                <h4>⚙️ Real-Time Adjustment</h4>
+                <p>Edit parameters directly or use sliders — simulation updates instantly</p>
+            </div>
+            <div class="info-card">
+                <h4>📚 Educational Tool</h4>
+                <p>Bridge the gap between textual problems and conceptual understanding</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>VNR VJIET AI-Week Vibe Coding Hackathon 2026</p>
+        <p>Built with ❤️ for STEM learners | <a href="#">TEAM NULLVEX</a></p>
+    </footer>
+</div>
+
+<script>
+// ──────────────────────────────────────────────
+//  DOM refs
+// ──────────────────────────────────────────────
+const problemInput    = document.getElementById('problem-input');
+const visualizeBtn    = document.getElementById('visualize-btn');
+const clearBtn        = document.getElementById('clear-btn');
+const statusMessage   = document.getElementById('status-message');
+const canvasContainer = document.getElementById('canvas-container');
+const canvas          = document.getElementById('physics-canvas');
+const placeholder     = document.querySelector('.placeholder');
+const loading         = document.getElementById('loading');
+const controls        = document.getElementById('controls');
+const equationsPanel  = document.getElementById('equations-panel');
+const equationsDisplay = document.getElementById('equations-display');
+const calculationsDisplay = document.getElementById('calculations-display');
+
+const parsedParamsBox = document.getElementById('parsed-params');
+const paramFields     = document.getElementById('param-fields');
+const paramApplyBtn   = document.getElementById('param-apply-btn');
+
+const param1        = document.getElementById('param1');
+const param1Value   = document.getElementById('param1-value');
+const param2        = document.getElementById('param2');
+const param2Value   = document.getElementById('param2-value');
+const param3        = document.getElementById('param3');
+const param3Value   = document.getElementById('param3-value');
+const labelParam1   = document.getElementById('label-param1');
+const labelParam2   = document.getElementById('label-param2');
+const playBtn       = document.getElementById('play-btn');
+const pauseBtn      = document.getElementById('pause-btn');
+const resetBtn      = document.getElementById('reset-btn');
+
+const ctx           = canvas.getContext('2d');
+let animationId, isPlaying = false, simulationData = null;
+
+// ──────────────────────────────────────────────
+//  Slider config per simulation type
+// ──────────────────────────────────────────────
+const sliderConfig = {
+    projectile: {
+        p1: { label: 'Initial Velocity (m/s)', min: 1, max: 40, step: 0.5, unit: 'm/s', key: 'velocity' },
+        p2: { label: 'Launch Angle (°)',        min: 1, max: 89, step: 1,   unit: '°',   key: 'angle'    }
+    },
+    pendulum: {
+        p1: { label: 'Pendulum Length (m)', min: 0.5, max: 5,  step: 0.1, unit: 'm',   key: 'length'  },
+        p2: { label: 'Initial Angle (°)',   min: 1,   max: 80, step: 1,   unit: '°',   key: 'angle'   }
+    },
+    spring: {
+        p1: { label: 'Spring Constant (N/m)', min: 10, max: 500, step: 10, unit: 'N/m',  key: 'springConstant' },
+        p2: { label: 'Amplitude (m)',          min: 0.05, max: 1, step: 0.05, unit: 'm', key: 'amplitude'      }
+    },
+    collision: {
+        p1: { label: 'Velocity of Obj 1 (m/s)', min: 1, max: 20, step: 0.5, unit: 'm/s', key: 'velocity1' },
+        p2: { label: 'Velocity of Obj 2 (m/s)', min: 1, max: 20, step: 0.5, unit: 'm/s', key: 'velocity2' }
+    },
+    incline: {
+        p1: { label: 'Incline Angle (°)',  min: 5,  max: 80, step: 1,  unit: '°',  key: 'inclineAngle' },
+        p2: { label: 'Block Mass (kg)',    min: 1,  max: 20, step: 1,  unit: 'kg', key: 'mass'         }
+    },
+    freefall: {
+        p1: { label: 'Initial Height (m)', min: 5, max: 200, step: 5, unit: 'm', key: 'height' },
+        p2: { label: 'Gravity (m/s²)',     min: 1, max: 20,  step: 0.1, unit: 'm/s²', key: 'gravity' }
+    },
+    linear: {
+        p1: { label: 'Acceleration (m/s²)', min: 0.5, max: 10, step: 0.5, unit: 'm/s²', key: 'accel' },
+        p2: { label: 'Time Scale',           min: 0.1, max: 3,  step: 0.1, unit: 'x',   key: null    }
+    }
+};
+
+// ──────────────────────────────────────────────
+//  Numeric parameters shown in the "Live Parameters" box
+// ──────────────────────────────────────────────
+const paramDefs = {
+    projectile: [
+        { key: 'velocity', label: 'Initial Velocity', unit: 'm/s', min: 1, max: 60 },
+        { key: 'angle',    label: 'Launch Angle',     unit: '°',   min: 1, max: 89 }
+    ],
+    pendulum: [
+        { key: 'length', label: 'Length',        unit: 'm',   min: 0.1, max: 10 },
+        { key: 'angle',  label: 'Initial Angle', unit: '°',   min: 1,   max: 80 }
+    ],
+    spring: [
+        { key: 'springConstant', label: 'Spring Constant', unit: 'N/m', min: 1, max: 1000 },
+        { key: 'amplitude',      label: 'Amplitude',       unit: 'm',   min: 0.01, max: 2 },
+        { key: 'mass',           label: 'Mass',            unit: 'kg',  min: 0.1, max: 20 }
+    ],
+    collision: [
+        { key: 'mass1',     label: 'Mass 1',     unit: 'kg',  min: 0.5, max: 20 },
+        { key: 'mass2',     label: 'Mass 2',     unit: 'kg',  min: 0.5, max: 20 },
+        { key: 'velocity1', label: 'Velocity 1', unit: 'm/s', min: 0.5, max: 30 },
+        { key: 'velocity2', label: 'Velocity 2', unit: 'm/s', min: 0.5, max: 30 }
+    ],
+    incline: [
+        { key: 'inclineAngle', label: 'Incline Angle', unit: '°',  min: 1,  max: 85 },
+        { key: 'mass',         label: 'Mass',          unit: 'kg', min: 0.5, max: 50 }
+    ],
+    freefall: [
+        { key: 'height',  label: 'Initial Height', unit: 'm',    min: 1,  max: 300 },
+        { key: 'gravity', label: 'Gravity',        unit: 'm/s²', min: 0.1, max: 25 }
+    ],
+    linear: [
+        { key: 'accel', label: 'Acceleration', unit: 'm/s²', min: 0.1, max: 20 }
+    ]
+};
+
+// ──────────────────────────────────────────────
+//  Example chips
+// ──────────────────────────────────────────────
+document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        problemInput.value = chip.dataset.problem;
+        problemInput.focus();
+    });
+});
+
+// ──────────────────────────────────────────────
+//  Slider events — immediately restart simulation
+// ──────────────────────────────────────────────
+param1.addEventListener('input', e => {
+    const cfg = currentSliderConfig();
+    param1Value.textContent = `${e.target.value} ${cfg ? cfg.p1.unit : 'm/s'}`;
+    if (simulationData && cfg && cfg.p1.key) {
+        simulationData[cfg.p1.key] = parseFloat(e.target.value);
+        restartSimulation();
+        syncParamBox();
+    }
+});
+
+param2.addEventListener('input', e => {
+    const cfg = currentSliderConfig();
+    param2Value.textContent = `${e.target.value} ${cfg ? cfg.p2.unit : '°'}`;
+    if (simulationData && cfg && cfg.p2.key) {
+        simulationData[cfg.p2.key] = parseFloat(e.target.value);
+        restartSimulation();
+        syncParamBox();
+    }
+});
+
+param3.addEventListener('input', e => {
+    param3Value.textContent = `${e.target.value}x`;
+});
+
+function currentSliderConfig() {
+    if (!simulationData) return null;
+    return sliderConfig[simulationData.type] || null;
+}
+
+// ──────────────────────────────────────────────
+//  Live Parameter box
+// ──────────────────────────────────────────────
+function buildParamBox() {
+    if (!simulationData) return;
+    const defs = paramDefs[simulationData.type];
+    if (!defs) { parsedParamsBox.classList.remove('show'); return; }
+
+    paramFields.innerHTML = defs.map(d => `
+        <div class="param-row">
+            <label>${d.label}</label>
+            <input type="number"
+                   id="pp-${d.key}"
+                   min="${d.min}" max="${d.max}" step="${d.min < 1 ? 0.01 : 0.5}"
+                   value="${+(simulationData[d.key] !== undefined ? simulationData[d.key] : 0).toFixed(3)}">
+            <span class="param-unit">${d.unit}</span>
+        </div>
+    `).join('');
+
+    parsedParamsBox.classList.add('show');
+}
+
+function syncParamBox() {
+    if (!simulationData) return;
+    const defs = paramDefs[simulationData.type];
+    if (!defs) return;
+    defs.forEach(d => {
+        const el = document.getElementById(`pp-${d.key}`);
+        if (el && simulationData[d.key] !== undefined)
+            el.value = +(simulationData[d.key]).toFixed(3);
+    });
+}
+
+paramApplyBtn.addEventListener('click', () => {
+    if (!simulationData) return;
+    const defs = paramDefs[simulationData.type];
+    if (!defs) return;
+
+    let hasError = false;
+    defs.forEach(d => {
+        const el = document.getElementById(`pp-${d.key}`);
+        if (!el) return;
+        const raw = parseFloat(el.value);
+        // Validate: must be finite number within defined bounds
+        if (!isFinite(raw) || isNaN(raw)) {
+            el.style.borderColor = '#ff4444';
+            hasError = true;
+        } else if (raw < d.min || raw > d.max) {
+            el.style.borderColor = '#ffaa00';
+            el.value = Math.min(d.max, Math.max(d.min, raw)); // auto-clamp
+            simulationData[d.key] = parseFloat(el.value);
+        } else {
+            el.style.borderColor = '';
+            simulationData[d.key] = raw;
+        }
+    });
+
+    if (hasError) { showStatus('⚠ Some fields have invalid values — please correct them.', 'error'); return; }
+
+    // Spring-specific: prevent ω explosion
+    if (simulationData.type === 'spring') {
+        const omega = Math.sqrt(simulationData.springConstant / simulationData.mass);
+        if (!isFinite(omega) || omega > 200) {
+            showStatus('⚠ Spring constant / mass ratio too extreme. Adjusted to safe values.', 'error');
+            simulationData.springConstant = 100;
+            simulationData.mass = 1;
+            syncParamBox();
+        }
+    }
+
+    applyDataToSliders();
+    restartSimulation();
+    displayEquations();
+    showStatus('✓ Parameters updated! Simulation restarted.', 'success');
+});
+
+function applyDataToSliders() {
+    const cfg = currentSliderConfig();
+    if (!cfg || !simulationData) return;
+
+    if (cfg.p1.key && simulationData[cfg.p1.key] !== undefined) {
+        const v1 = simulationData[cfg.p1.key];
+        param1.value = v1;
+        param1Value.textContent = `${v1} ${cfg.p1.unit}`;
+    }
+    if (cfg.p2.key && simulationData[cfg.p2.key] !== undefined) {
+        const v2 = simulationData[cfg.p2.key];
+        param2.value = v2;
+        param2Value.textContent = `${v2} ${cfg.p2.unit}`;
+    }
+}
+
+// ──────────────────────────────────────────────
+//  Configure sliders for each sim type
+// ──────────────────────────────────────────────
+function configureSliders() {
+    const cfg = sliderConfig[simulationData.type];
+    if (!cfg) return;
+
+    labelParam1.textContent = cfg.p1.label;
+    param1.min  = cfg.p1.min;
+    param1.max  = cfg.p1.max;
+    param1.step = cfg.p1.step;
+
+    labelParam2.textContent = cfg.p2.label;
+    param2.min  = cfg.p2.min;
+    param2.max  = cfg.p2.max;
+    param2.step = cfg.p2.step;
+
+    applyDataToSliders();
+}
+
+// ──────────────────────────────────────────────
+//  Visualize button
+// ──────────────────────────────────────────────
+visualizeBtn.addEventListener('click', async () => {
+    const problem = problemInput.value.trim();
+
+    // ── Input guards ──
+    if (!problem) { showStatus('⚠ Please enter a physics problem first.', 'error'); return; }
+    if (problem.length < 5) { showStatus('⚠ Problem description is too short. Please be more specific.', 'error'); return; }
+    if (problem.length > 2000) { showStatus('⚠ Input is too long (max 2000 characters).', 'error'); return; }
+
+    // Prevent double-click spam
+    if (visualizeBtn.disabled) return;
+    visualizeBtn.disabled = true;
+
+    placeholder.style.display = 'none';
+    canvas.style.display = 'none';
+    loading.classList.add('active');
+    controls.style.display = 'none';
+    equationsPanel.style.display = 'none';
+    parsedParamsBox.classList.remove('show');
+
+    setTimeout(() => {
+        try {
+            simulationData = parseProblem(problem);
+            loading.classList.remove('active');
+            canvas.style.display = 'block';
+            controls.style.display = 'block';
+            equationsPanel.style.display = 'block';
+
+            configureSliders();
+            buildParamBox();
+            displayEquations();
+            resizeCanvas();
+            startSimulation();
+            showStatus('✓ Simulation generated! Use sliders or edit parameters below ↑', 'success');
+        } catch (err) {
+            loading.classList.remove('active');
+            placeholder.style.display = 'flex';
+            showStatus('⚠ Could not parse that problem. Try rephrasing or use an example below.', 'error');
+            console.error('[PhysViz] parseProblem error:', err);
+        } finally {
+            visualizeBtn.disabled = false; // always re-enable
+        }
+    }, 1200);
+});
+
+// ──────────────────────────────────────────────
+//  Clear
+// ──────────────────────────────────────────────
+clearBtn.addEventListener('click', () => {
+    problemInput.value = '';
+    stopSimulation();
+    canvas.style.display = 'none';
+    placeholder.style.display = 'flex';
+    controls.style.display = 'none';
+    equationsPanel.style.display = 'none';
+    parsedParamsBox.classList.remove('show');
+    simulationData = null;
+    hideStatus();
+});
+
+// ──────────────────────────────────────────────
+//  Playback controls
+// ──────────────────────────────────────────────
+playBtn.addEventListener('click',  () => { if (!isPlaying && simulationData) startSimulation(); });
+pauseBtn.addEventListener('click', () => stopSimulation());
+resetBtn.addEventListener('click', () => {
+    if (simulationData) { simulationData.time = 0; stopSimulation(); startSimulation(); }
+});
+
+// ──────────────────────────────────────────────
+//  Status helpers
+// ──────────────────────────────────────────────
+function showStatus(msg, type) {
+    statusMessage.textContent = msg;
+    statusMessage.className = `status-message show ${type}`;
+    setTimeout(hideStatus, 5000);
+}
+function hideStatus() { statusMessage.classList.remove('show'); }
+
+// ──────────────────────────────────────────────
+//  Canvas resize
+// ──────────────────────────────────────────────
+function resizeCanvas() {
+    const w = canvasContainer.clientWidth  - 4;
+    const h = canvasContainer.clientHeight - 4;
+    // Only resize if dimensions are valid to avoid blank canvas
+    if (w > 0 && h > 0) {
+        canvas.width  = w;
+        canvas.height = h;
+        if (simulationData && !isPlaying) drawFrame(); // redraw on resize if paused
+    }
+}
+window.addEventListener('resize', resizeCanvas);
+
+// ──────────────────────────────────────────────
+//  Restart (keep parameters, reset time)
+// ──────────────────────────────────────────────
+function restartSimulation() {
+    stopSimulation();
+    if (simulationData) { simulationData.time = 0; }
+    startSimulation();
+    updateCalculations();
+}
+
+// ──────────────────────────────────────────────
+//  Parse problem  (with full edge-case handling)
+// ──────────────────────────────────────────────
+
+/** Safe number — returns fallback if val is NaN, ±Infinity, or out of [min,max] */
+function safeNum(val, fallback, min = -Infinity, max = Infinity) {
+    const n = Number(val);
+    if (!isFinite(n) || isNaN(n)) return fallback;
+    return Math.min(max, Math.max(min, n));
+}
+
+/** Extract all positive finite numbers from a string */
+function extractNums(str) {
+    return (str.match(/\d+\.?\d*/g) || [])
+        .map(Number)
+        .filter(n => isFinite(n) && n >= 0);
+}
+
+function parseProblem(problem) {
+    // ── Input guard ──
+    if (typeof problem !== 'string') throw new Error('Invalid input');
+    const trimmed = problem.trim();
+    if (trimmed.length === 0) throw new Error('Empty problem');
+    if (trimmed.length > 2000) throw new Error('Problem text too long');
+
+    const lower = trimmed.toLowerCase();
+    const nums  = extractNums(trimmed);
+
+    const data = {
+        type:    'projectile',
+        time:    0,
+        gravity: 9.8   // default g; overridden for freefall if user specifies
+    };
+
+    // ── Keyword scoring — avoid wrong type on ambiguous text ──
+    const score = {
+        pendulum:  (lower.includes('pendulum') ? 10 : 0) +
+                   (lower.includes('swing') ? 3 : 0) +
+                   (lower.includes('bob') ? 2 : 0),
+        spring:    (lower.includes('spring') ? 10 : 0) +
+                   (lower.includes('oscillat') ? 3 : 0) +
+                   (lower.includes('hooke') ? 5 : 0),
+        collision: ((lower.includes('collid') || lower.includes('collision')) ? 10 : 0) +
+                   (lower.includes('elastic') ? 3 : 0) +
+                   (lower.includes('momentum') ? 3 : 0),
+        incline:   ((lower.includes('incline') || lower.includes('ramp') || lower.includes('slope')) ? 10 : 0) +
+                   (lower.includes('slide') ? 2 : 0) +
+                   (lower.includes('frictionless') ? 1 : 0),
+        freefall:  ((lower.includes('free fall') || lower.includes('freefall') || lower.includes('free-fall')) ? 10 : 0) +
+                   ((lower.includes('fall') && lower.includes('height')) ? 5 : 0) +
+                   ((lower.includes('drop') && !lower.includes('angle') && !lower.includes('throw')) ? 4 : 0),
+        linear:    ((lower.includes('car') || lower.includes('train') || lower.includes('vehicle')) ? 5 : 0) +
+                   ((lower.includes('linear') || lower.includes('straight line')) ? 3 : 0) +
+                   ((lower.includes('accelerat') && !lower.includes('angle') && !lower.includes('throw')) ? 3 : 0),
+        projectile:((lower.includes('throw') || lower.includes('launch') || lower.includes('projectile')) ? 5 : 0) +
+                   ((lower.includes('angle') && (lower.includes('throw') || lower.includes('velocity'))) ? 3 : 0) +
+                   ((lower.includes('straight up') || lower.includes('vertical')) ? 4 : 0)
+    };
+
+    // Pick the highest-scoring type (ties → projectile as sensible default)
+    const winner = Object.entries(score).reduce(
+        (best, [type, s]) => s > best[1] ? [type, s] : best,
+        ['projectile', 0]
+    )[0];
+
+    data.type = winner;
+
+    // ── Populate fields per type with safe defaults + clamping ──
+    switch (data.type) {
+
+        case 'pendulum':
+            data.length = safeNum(nums[0], 1.5, 0.1, 10);
+            data.angle  = safeNum(nums[1], 30,  1,   80);
+            break;
+
+        case 'spring':
+            data.springConstant = safeNum(nums[0], 100,  1, 10000);
+            data.amplitude      = safeNum(nums[1], 0.2,  0.01, 5);
+            data.mass           = safeNum(nums[2], 2,    0.1, 500);
+            // Guard: prevent ω blowing up (very small mass + large k)
+            if (Math.sqrt(data.springConstant / data.mass) > 200) {
+                data.springConstant = 100; data.mass = 1;
+            }
+            break;
+
+        case 'collision':
+            data.mass1     = safeNum(nums[0], 2,   0.1, 1000);
+            data.mass2     = safeNum(nums[1], 3,   0.1, 1000);
+            data.velocity1 = safeNum(nums[2], 5,   0.1, 100);
+            data.velocity2 = safeNum(nums[3], 2,   0.1, 100);
+            // Ensure objects approach each other (obj1 must be moving right, obj2 left)
+            // If user gives both as positive we flip obj2
+            if (data.velocity1 > 0 && data.velocity2 > 0) data.velocity2 = -data.velocity2;
+            break;
+
+        case 'incline':
+            data.mass         = safeNum(nums[0], 5,  0.1, 1000);
+            data.inclineAngle = safeNum(nums[1], 30, 1,   89);
+            break;
+
+        case 'freefall':
+            data.height = safeNum(nums[0], 50, 1, 5000);
+            break;
+
+        case 'linear':
+            data.accel = safeNum(nums[0], 2, 0.1, 100);
+            break;
+
+        case 'projectile':
+        default:
+            data.type     = 'projectile';
+            data.velocity = safeNum(nums[0], 20, 0.1, 200);
+            if (lower.includes('straight up') || lower.includes('vertical') ||
+                lower.includes('upward') || lower.includes('90')) {
+                data.angle = 90;
+            } else {
+                data.angle = safeNum(nums[1], 45, 1, 89);
+            }
+            // 0° or 90° projectile edge cases
+            if (data.angle <= 0)  data.angle = 1;
+            if (data.angle >= 90) data.angle = 89;
+            break;
+    }
+
+    // ── Universal sanity check ──
+    Object.keys(data).forEach(k => {
+        if (typeof data[k] === 'number' && !isFinite(data[k])) {
+            console.warn(`[PhysViz] Non-finite value for "${k}", resetting`);
+            data[k] = 0;
+        }
+    });
+
+    return data;
+}
+
+// ──────────────────────────────────────────────
+//  Simulation loop
+// ──────────────────────────────────────────────
+function startSimulation() { isPlaying = true; animate(); }
+function stopSimulation()  { isPlaying = false; if (animationId) cancelAnimationFrame(animationId); }
+
+function animate() {
+    if (!isPlaying || !simulationData) return;
+    const ts = Math.min(parseFloat(param3.value) || 1, 3); // cap time-scale at 3x
+    const dt = 0.016 * ts;
+    // Hard time ceiling per type — prevents infinite runaway
+    const timeLimits = { projectile:60, pendulum:300, spring:300, collision:30, incline:60, freefall:60, linear:120 };
+    const limit = timeLimits[simulationData.type] || 120;
+    simulationData.time = Math.min(simulationData.time + dt, limit);
+    drawFrame();
+    updateCalculations();
+    animationId = requestAnimationFrame(animate);
+}
+
+// ──────────────────────────────────────────────
+//  Draw dispatcher
+// ──────────────────────────────────────────────
+function drawFrame() {
+    if (!simulationData) return;
+    if (canvas.width === 0 || canvas.height === 0) return; // canvas not yet sized
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (['projectile','freefall','collision'].includes(simulationData.type)) {
+        ctx.strokeStyle = 'rgba(0,255,136,0.3)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height - 50);
+        ctx.lineTo(canvas.width, canvas.height - 50);
+        ctx.stroke();
+    }
+
+    const drawFn = {
+        projectile: drawProjectile,
+        pendulum:   drawPendulum,
+        linear:     drawLinearMotion,
+        collision:  drawCollision,
+        spring:     drawSpring,
+        incline:    drawIncline,
+        freefall:   drawFreeFall
+    }[simulationData.type];
+
+    if (drawFn) {
+        drawFn();
+    } else {
+        // Unknown type fallback
+        ctx.fillStyle = '#ff6666';
+        ctx.font = 'bold 18px IBM Plex Mono';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚠ Unknown simulation type: ' + simulationData.type, canvas.width/2, canvas.height/2);
+        ctx.textAlign = 'left';
+    }
+}
+
+// ──────────────────────────────────────────────
+//  Equations display
+// ──────────────────────────────────────────────
+function displayEquations() {
+    if (!simulationData) return;
+    const eqs = {
+        projectile: `
+            <div class="equation-item"><div class="equation-label">Position (X-axis)</div><div class="equation-formula">x = v₀ cos(θ) × t</div><div class="equation-description">Horizontal position — constant velocity component</div></div>
+            <div class="equation-item"><div class="equation-label">Position (Y-axis)</div><div class="equation-formula">y = v₀ sin(θ)t − ½gt²</div><div class="equation-description">Vertical position — initial upward component minus gravity</div></div>
+            <div class="equation-item"><div class="equation-label">Velocity (X)</div><div class="equation-formula">vₓ = v₀ cos(θ)</div><div class="equation-description">Horizontal velocity is constant</div></div>
+            <div class="equation-item"><div class="equation-label">Velocity (Y)</div><div class="equation-formula">vᵧ = v₀ sin(θ) − gt</div><div class="equation-description">Vertical velocity decreases due to gravity</div></div>`,
+        pendulum: `
+            <div class="equation-item"><div class="equation-label">Angular Displacement</div><div class="equation-formula">θ(t) = θ₀ cos(ωt)</div><div class="equation-description">SHM for small angles</div></div>
+            <div class="equation-item"><div class="equation-label">Angular Frequency</div><div class="equation-formula">ω = √(g/L)</div></div>
+            <div class="equation-item"><div class="equation-label">Period</div><div class="equation-formula">T = 2π√(L/g)</div></div>
+            <div class="equation-item"><div class="equation-label">Restoring Force</div><div class="equation-formula">F = −mg sin(θ)</div></div>`,
+        linear: `
+            <div class="equation-item"><div class="equation-label">Position</div><div class="equation-formula">x = ½at²</div></div>
+            <div class="equation-item"><div class="equation-label">Velocity</div><div class="equation-formula">v = at</div></div>
+            <div class="equation-item"><div class="equation-label">Velocity-Position</div><div class="equation-formula">v² = 2ax</div></div>
+            <div class="equation-item"><div class="equation-label">Force</div><div class="equation-formula">F = ma</div></div>`,
+        collision: `
+            <div class="equation-item"><div class="equation-label">Conservation of Momentum</div><div class="equation-formula">m₁u₁ + m₂u₂ = m₁v₁ + m₂v₂</div></div>
+            <div class="equation-item"><div class="equation-label">Final Velocity 1</div><div class="equation-formula">v₁ = [(m₁−m₂)u₁ + 2m₂u₂] / (m₁+m₂)</div></div>
+            <div class="equation-item"><div class="equation-label">Final Velocity 2</div><div class="equation-formula">v₂ = [(m₂−m₁)u₂ + 2m₁u₁] / (m₁+m₂)</div></div>
+            <div class="equation-item"><div class="equation-label">Kinetic Energy</div><div class="equation-formula">½m₁u₁² + ½m₂u₂² = ½m₁v₁² + ½m₂v₂²</div></div>`,
+        spring: `
+            <div class="equation-item"><div class="equation-label">Displacement</div><div class="equation-formula">x(t) = A cos(ωt)</div></div>
+            <div class="equation-item"><div class="equation-label">Angular Frequency</div><div class="equation-formula">ω = √(k/m)</div></div>
+            <div class="equation-item"><div class="equation-label">Hooke's Law</div><div class="equation-formula">F = −kx</div></div>
+            <div class="equation-item"><div class="equation-label">Period</div><div class="equation-formula">T = 2π√(m/k)</div></div>`,
+        incline: `
+            <div class="equation-item"><div class="equation-label">Acceleration</div><div class="equation-formula">a = g sin(θ)</div></div>
+            <div class="equation-item"><div class="equation-label">Normal Force</div><div class="equation-formula">N = mg cos(θ)</div></div>
+            <div class="equation-item"><div class="equation-label">Displacement</div><div class="equation-formula">s = ½at²</div></div>
+            <div class="equation-item"><div class="equation-label">Velocity</div><div class="equation-formula">v = at</div></div>`,
+        freefall: `
+            <div class="equation-item"><div class="equation-label">Position</div><div class="equation-formula">y = h₀ − ½gt²</div></div>
+            <div class="equation-item"><div class="equation-label">Velocity</div><div class="equation-formula">v = gt</div></div>
+            <div class="equation-item"><div class="equation-label">Velocity-Height</div><div class="equation-formula">v² = 2g(h₀ − y)</div></div>
+            <div class="equation-item"><div class="equation-label">Impact Velocity</div><div class="equation-formula">v = √(2gh₀)</div></div>`
+    };
+    equationsDisplay.innerHTML = eqs[simulationData.type] || '';
+}
+
+// ──────────────────────────────────────────────
+//  updateCalculations (unchanged formulas, now uses live simulationData fields)
+// ──────────────────────────────────────────────
+function updateCalculations() {
+    if (!simulationData) return;
+    const t = simulationData.time;
+    const g = simulationData.gravity || 9.8;
+    let html = '';
+
+    if (simulationData.type === 'projectile') {
+        const v0 = simulationData.velocity, angle = simulationData.angle, ar = angle * Math.PI / 180;
+        const vx = v0 * Math.cos(ar), vy0 = v0 * Math.sin(ar);
+        const vy = vy0 - g * t;
+        const x = vx * t, y = vy0 * t - 0.5 * g * t * t;
+        const maxH = vy0 * vy0 / (2 * g);
+        const tTop = vy0 / g, tFlight = 2 * tTop;
+        const range = vx * tFlight;
+        const speed = Math.sqrt(vx*vx + vy*vy);
+        html = `
+            <div class="calculation-row"><span class="calc-label">v₀</span><span class="calc-value">${v0.toFixed(2)} m/s</span></div>
+            <div class="calculation-row"><span class="calc-label">θ</span><span class="calc-value">${angle.toFixed(1)}°</span></div>
+            <div class="calculation-row"><span class="calc-label">vₓ</span><span class="calc-value">${vx.toFixed(2)} m/s</span></div>
+            <div class="calculation-row"><span class="calc-label">vᵧ₀</span><span class="calc-value">${vy0.toFixed(2)} m/s</span></div>
+            <div class="calc-highlight">
+                <div class="calculation-row"><span class="calc-label">t</span><span class="calc-value">${t.toFixed(2)} s</span></div>
+                <div class="calculation-row"><span class="calc-label">Position (x,y)</span><span class="calc-value">(${x.toFixed(2)}, ${Math.max(0,y).toFixed(2)}) m</span></div>
+                <div class="calculation-row"><span class="calc-label">vᵧ now</span><span class="calc-value">${vy.toFixed(2)} m/s</span></div>
+                <div class="calculation-row"><span class="calc-label">Speed</span><span class="calc-value">${speed.toFixed(2)} m/s</span></div>
+            </div>
+            <div class="calculation-row"><span class="calc-label">Max Height</span><span class="calc-value">${maxH.toFixed(2)} m</span></div>
+            <div class="calculation-row"><span class="calc-label">Range</span><span class="calc-value">${range.toFixed(2)} m</span></div>
+            <div class="calculation-row"><span class="calc-label">Flight Time</span><span class="calc-value">${tFlight.toFixed(2)} s</span></div>`;
+    } else if (simulationData.type === 'pendulum') {
+        const L = simulationData.length || 2;
+        const a0 = simulationData.angle * Math.PI / 180;
+        const w = Math.sqrt(g / L);
+        const T = 2 * Math.PI / w;
+        const curA = a0 * Math.cos(w * t);
+        const curADeg = curA * 180 / Math.PI;
+        const maxV = a0 * Math.sqrt(g * L);
+        const angVel = -a0 * w * Math.sin(w * t);
+        html = `
+            <div class="calculation-row"><span class="calc-label">L</span><span class="calc-value">${L.toFixed(2)} m</span></div>
+            <div class="calculation-row"><span class="calc-label">θ₀</span><span class="calc-value">${simulationData.angle.toFixed(1)}°</span></div>
+            <div class="calculation-row"><span class="calc-label">ω</span><span class="calc-value">${w.toFixed(3)} rad/s</span></div>
+            <div class="calculation-row"><span class="calc-label">T</span><span class="calc-value">${T.toFixed(3)} s</span></div>
+            <div class="calc-highlight">
+                <div class="calculation-row"><span class="calc-label">t</span><span class="calc-value">${t.toFixed(2)} s</span></div>
+                <div class="calculation-row"><span class="calc-label">θ now</span><span class="calc-value">${curADeg.toFixed(2)}°</span></div>
+                <div class="calculation-row"><span class="calc-label">dθ/dt</span><span class="calc-value">${angVel.toFixed(3)} rad/s</span></div>
+            </div>
+            <div class="calculation-row"><span class="calc-label">Max Velocity</span><span class="calc-value">${maxV.toFixed(3)} m/s</span></div>`;
+    } else if (simulationData.type === 'spring') {
+        const k = simulationData.springConstant, m = simulationData.mass, A = simulationData.amplitude;
+        const w = Math.sqrt(k / m);
+        const x = A * Math.cos(w * t), v = -A * w * Math.sin(w * t);
+        const T = 2 * Math.PI / w, f = 1 / T;
+        const pe = 0.5 * k * x * x, ke = 0.5 * m * v * v;
+        html = `
+            <div class="calculation-row"><span class="calc-label">k</span><span class="calc-value">${k} N/m</span></div>
+            <div class="calculation-row"><span class="calc-label">m</span><span class="calc-value">${m} kg</span></div>
+            <div class="calculation-row"><span class="calc-label">A</span><span class="calc-value">${A.toFixed(2)} m</span></div>
+            <div class="calculation-row"><span class="calc-label">ω</span><span class="calc-value">${w.toFixed(3)} rad/s</span></div>
+            <div class="calc-highlight">
+                <div class="calculation-row"><span class="calc-label">t</span><span class="calc-value">${t.toFixed(2)} s</span></div>
+                <div class="calculation-row"><span class="calc-label">x</span><span class="calc-value">${x.toFixed(3)} m</span></div>
+                <div class="calculation-row"><span class="calc-label">v</span><span class="calc-value">${v.toFixed(3)} m/s</span></div>
+                <div class="calculation-row"><span class="calc-label">F</span><span class="calc-value">${(-k*x).toFixed(2)} N</span></div>
+            </div>
+            <div class="calculation-row"><span class="calc-label">T</span><span class="calc-value">${T.toFixed(3)} s</span></div>
+            <div class="calculation-row"><span class="calc-label">f</span><span class="calc-value">${f.toFixed(3)} Hz</span></div>
+            <div class="calculation-row"><span class="calc-label">PE / KE / Total</span><span class="calc-value">${pe.toFixed(2)} / ${ke.toFixed(2)} / ${(pe+ke).toFixed(2)} J</span></div>`;
+    } else if (simulationData.type === 'collision') {
+        const { mass1:m1, mass2:m2, velocity1:u1, velocity2:u2 } = simulationData;
+        const collT = Math.abs((canvas.width/2 - 150) / (u1 * 20));
+        const v1f = ((m1-m2)*u1 + 2*m2*u2) / (m1+m2);
+        const v2f = ((m2-m1)*u2 + 2*m1*u1) / (m1+m2);
+        const cv1 = t < collT ? u1 : v1f, cv2 = t < collT ? u2 : v2f;
+        const totP = m1*cv1 + m2*cv2, totKE = 0.5*m1*cv1*cv1 + 0.5*m2*cv2*cv2;
+        html = `
+            <div class="calculation-row"><span class="calc-label">m₁ / m₂</span><span class="calc-value">${m1} / ${m2} kg</span></div>
+            <div class="calculation-row"><span class="calc-label">u₁ / u₂</span><span class="calc-value">${u1} / ${u2} m/s</span></div>
+            <div class="calc-highlight">
+                <div class="calculation-row"><span class="calc-label">t</span><span class="calc-value">${t.toFixed(2)} s</span></div>
+                <div class="calculation-row"><span class="calc-label">Status</span><span class="calc-value">${t < collT ? 'Before' : 'After'} Collision</span></div>
+                <div class="calculation-row"><span class="calc-label">v₁ now</span><span class="calc-value">${cv1.toFixed(2)} m/s</span></div>
+                <div class="calculation-row"><span class="calc-label">v₂ now</span><span class="calc-value">${cv2.toFixed(2)} m/s</span></div>
+            </div>
+            <div class="calculation-row"><span class="calc-label">Total Momentum</span><span class="calc-value">${totP.toFixed(2)} kg·m/s</span></div>
+            <div class="calculation-row"><span class="calc-label">Total KE</span><span class="calc-value">${totKE.toFixed(2)} J</span></div>`;
+    } else if (simulationData.type === 'incline') {
+        const theta = simulationData.inclineAngle, ar = theta * Math.PI / 180;
+        const m = simulationData.mass, a = g * Math.sin(ar);
+        const v = a * t, s = 0.5 * a * t * t;
+        const N = m * g * Math.cos(ar), Fp = m * g * Math.sin(ar);
+        html = `
+            <div class="calculation-row"><span class="calc-label">θ</span><span class="calc-value">${theta}°</span></div>
+            <div class="calculation-row"><span class="calc-label">m</span><span class="calc-value">${m} kg</span></div>
+            <div class="calculation-row"><span class="calc-label">a</span><span class="calc-value">${a.toFixed(2)} m/s²</span></div>
+            <div class="calc-highlight">
+                <div class="calculation-row"><span class="calc-label">t</span><span class="calc-value">${t.toFixed(2)} s</span></div>
+                <div class="calculation-row"><span class="calc-label">v</span><span class="calc-value">${v.toFixed(2)} m/s</span></div>
+                <div class="calculation-row"><span class="calc-label">s</span><span class="calc-value">${s.toFixed(2)} m</span></div>
+            </div>
+            <div class="calculation-row"><span class="calc-label">N</span><span class="calc-value">${N.toFixed(2)} N</span></div>
+            <div class="calculation-row"><span class="calc-label">F∥</span><span class="calc-value">${Fp.toFixed(2)} N</span></div>
+            <div class="calculation-row"><span class="calc-label">KE</span><span class="calc-value">${(0.5*m*v*v).toFixed(2)} J</span></div>`;
+    } else if (simulationData.type === 'freefall') {
+        const h0 = simulationData.height;
+        const y  = Math.max(0, h0 - 0.5 * g * t * t);
+        const v  = g * t;
+        const tI = Math.sqrt(2 * h0 / g), vI = Math.sqrt(2 * g * h0);
+        html = `
+            <div class="calculation-row"><span class="calc-label">h₀</span><span class="calc-value">${h0.toFixed(2)} m</span></div>
+            <div class="calculation-row"><span class="calc-label">g</span><span class="calc-value">${g.toFixed(2)} m/s²</span></div>
+            <div class="calc-highlight">
+                <div class="calculation-row"><span class="calc-label">t</span><span class="calc-value">${t.toFixed(2)} s</span></div>
+                <div class="calculation-row"><span class="calc-label">Height</span><span class="calc-value">${y.toFixed(2)} m</span></div>
+                <div class="calculation-row"><span class="calc-label">Speed</span><span class="calc-value">${v.toFixed(2)} m/s</span></div>
+            </div>
+            <div class="calculation-row"><span class="calc-label">Impact Time</span><span class="calc-value">${tI.toFixed(2)} s</span></div>
+            <div class="calculation-row"><span class="calc-label">Impact Velocity</span><span class="calc-value">${vI.toFixed(2)} m/s</span></div>`;
+    } else if (simulationData.type === 'linear') {
+        const a = simulationData.accel || 2;
+        const v = a * t, x = 0.5 * a * t * t;
+        html = `
+            <div class="calculation-row"><span class="calc-label">a</span><span class="calc-value">${a.toFixed(2)} m/s²</span></div>
+            <div class="calc-highlight">
+                <div class="calculation-row"><span class="calc-label">t</span><span class="calc-value">${t.toFixed(2)} s</span></div>
+                <div class="calculation-row"><span class="calc-label">v</span><span class="calc-value">${v.toFixed(2)} m/s</span></div>
+                <div class="calculation-row"><span class="calc-label">x</span><span class="calc-value">${x.toFixed(2)} m</span></div>
+            </div>
+            <div class="calculation-row"><span class="calc-label">KE (m=5 kg)</span><span class="calc-value">${(0.5*5*v*v).toFixed(2)} J</span></div>`;
+    }
+
+    calculationsDisplay.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  DRAW FUNCTIONS (all use simulationData fields directly)
+// ══════════════════════════════════════════════
+
+function drawProjectile() {
+    const t = simulationData.time;
+    const v0 = Math.max(0.01, simulationData.velocity || 0);
+    // Clamp angle: 0° and 90° cause degenerate trajectories
+    const angleDeg = Math.min(89, Math.max(1, simulationData.angle || 45));
+    const angle = angleDeg * Math.PI / 180;
+    const g = Math.max(0.1, simulationData.gravity || 9.8);
+
+    const x = v0 * Math.cos(angle) * t;
+    const y = v0 * Math.sin(angle) * t - 0.5 * g * t * t;
+
+    // Guard: if canvas is not yet sized, skip
+    if (canvas.width === 0 || canvas.height === 0) return;
+
+    const scale = Math.min(canvas.width / 100, canvas.height / 50);
+    const startX = 80, startY = canvas.height - 80;
+    const posX = startX + x * scale;
+    const posY = startY - y * scale;
+
+    // Axes
+    ctx.strokeStyle = 'rgba(143,163,191,0.5)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(50, startY); ctx.lineTo(canvas.width - 50, startY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(startX, 50); ctx.lineTo(startX, canvas.height - 50); ctx.stroke();
+
+    ctx.fillStyle = '#8fa3bf'; ctx.font = 'bold 14px IBM Plex Mono';
+    ctx.fillText('X (m)', canvas.width - 120, startY + 30);
+    ctx.save(); ctx.translate(30, canvas.height/2); ctx.rotate(-Math.PI/2);
+    ctx.fillText('Y (m)', 0, 0); ctx.restore();
+
+    // Full trajectory (dashed)
+    const totalTime = 2 * v0 * Math.sin(angle) / g;
+    ctx.strokeStyle = 'rgba(0,128,255,0.2)'; ctx.lineWidth = 2; ctx.setLineDash([5,5]);
+    ctx.beginPath();
+    for (let i = 0; i <= totalTime; i += 0.04) {
+        const tx = startX + v0 * Math.cos(angle) * i * scale;
+        const ty = startY - (v0 * Math.sin(angle) * i - 0.5 * g * i * i) * scale;
+        if (i === 0) ctx.moveTo(tx, ty); else ctx.lineTo(tx, ty);
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+
+    // Traveled path
+    ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 3;
+    ctx.shadowBlur = 10; ctx.shadowColor = '#00ff88';
+    ctx.beginPath();
+    for (let i = 0; i <= t; i += 0.04) {
+        const tx = startX + v0 * Math.cos(angle) * i * scale;
+        const ty_v = v0 * Math.sin(angle) * i - 0.5 * g * i * i;
+        if (ty_v >= 0) {
+            const px = tx, py = startY - ty_v * scale;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+    }
+    ctx.stroke(); ctx.shadowBlur = 0;
+
+    if (y >= 0 && posX < canvas.width - 50) {
+        const vx = v0 * Math.cos(angle), vy = v0 * Math.sin(angle) - g * t;
+        const vsc = 15;
+        ctx.strokeStyle = '#ff00ff'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(posX, posY); ctx.lineTo(posX + vx*vsc, posY - vy*vsc); ctx.stroke();
+
+        const aa = Math.atan2(-vy, vx), as = 10;
+        ctx.beginPath();
+        ctx.moveTo(posX + vx*vsc, posY - vy*vsc);
+        ctx.lineTo(posX+vx*vsc - as*Math.cos(aa-Math.PI/6), posY-vy*vsc + as*Math.sin(aa-Math.PI/6));
+        ctx.lineTo(posX+vx*vsc - as*Math.cos(aa+Math.PI/6), posY-vy*vsc + as*Math.sin(aa+Math.PI/6));
+        ctx.closePath(); ctx.fillStyle = '#ff00ff'; ctx.fill();
+
+        ctx.fillStyle = '#ff00ff'; ctx.font = 'bold 12px IBM Plex Mono';
+        ctx.fillText(`v=${Math.sqrt(vx*vx+vy*vy).toFixed(1)} m/s`, posX+vx*vsc+10, posY-vy*vsc);
+
+        const gr = ctx.createRadialGradient(posX, posY, 0, posX, posY, 25);
+        gr.addColorStop(0, '#00ff88'); gr.addColorStop(1, 'rgba(0,255,136,0)');
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(posX, posY, 25, 0, 6.28); ctx.fill();
+        ctx.fillStyle = '#00ff88'; ctx.beginPath(); ctx.arc(posX, posY, 12, 0, 6.28); ctx.fill();
+
+        ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(posX+25, posY-45, 110, 50);
+        ctx.strokeStyle = '#00ff88'; ctx.lineWidth=1; ctx.strokeRect(posX+25, posY-45, 110, 50);
+        ctx.fillStyle = '#e8f4ff'; ctx.font = 'bold 11px IBM Plex Mono'; ctx.fillText('Projectile', posX+30, posY-28);
+        ctx.font = '10px IBM Plex Mono';
+        ctx.fillText(`x: ${x.toFixed(1)} m`, posX+30, posY-15);
+        ctx.fillText(`y: ${y.toFixed(1)} m`, posX+30, posY-3);
+    } else {
+        simulationData.time = 0;
+    }
+}
+
+function drawPendulum() {
+    const t = simulationData.time;
+    const rawL = Math.max(0.1, simulationData.length || 2);
+    const length = Math.min(rawL, (canvas.height - 150) / 100) * 100; // fit in canvas
+    const a0 = (Math.min(80, Math.max(1, simulationData.angle || 30))) * Math.PI / 180;
+    const g = Math.max(0.1, simulationData.gravity || 9.8);
+    const omega = Math.sqrt(g / (length / 100));
+    if (!isFinite(omega) || omega === 0) return; // safety guard
+    const curAngle = a0 * Math.cos(omega * t);
+
+    const pivotX = canvas.width / 2, pivotY = 100;
+    const bobX = pivotX + length * Math.sin(curAngle);
+    const bobY = pivotY + length * Math.cos(curAngle);
+
+    ctx.strokeStyle = 'rgba(143,163,191,0.2)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.arc(pivotX, pivotY, length, 0, 6.28); ctx.stroke(); ctx.setLineDash([]);
+
+    ctx.strokeStyle = 'rgba(0,128,255,0.4)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(pivotX, pivotY, 80, 0, curAngle); ctx.stroke();
+    ctx.fillStyle = '#0080ff'; ctx.font = 'bold 12px IBM Plex Mono';
+    ctx.fillText(`θ = ${(curAngle*180/Math.PI).toFixed(1)}°`, pivotX+90, pivotY+20);
+
+    // Trace
+    ctx.strokeStyle = 'rgba(0,255,136,0.2)'; ctx.lineWidth=2;
+    ctx.beginPath();
+    for (let i = Math.max(0, t-2); i <= t; i += 0.05) {
+        const ca = a0 * Math.cos(omega * i);
+        const tx = pivotX + length * Math.sin(ca), ty = pivotY + length * Math.cos(ca);
+        if (i === Math.max(0, t-2)) ctx.moveTo(tx, ty); else ctx.lineTo(tx, ty);
+    }
+    ctx.stroke();
+
+    // Rod
+    ctx.strokeStyle = '#4a5568'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(pivotX, pivotY); ctx.lineTo(bobX, bobY); ctx.stroke();
+
+    // Velocity vector
+    const angV = -a0 * omega * Math.sin(omega * t);
+    const velM = angV * (length / 100);
+    const velX = velM * Math.cos(curAngle), velY = velM * Math.sin(curAngle);
+    if (Math.abs(velM) > 0.01) {
+        const vs = 30;
+        ctx.strokeStyle = '#ff00ff'; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.moveTo(bobX, bobY); ctx.lineTo(bobX+velX*vs, bobY+velY*vs); ctx.stroke();
+        ctx.fillStyle = '#ff00ff'; ctx.font = 'bold 11px IBM Plex Mono';
+        ctx.fillText(`v=${Math.abs(velM).toFixed(2)} m/s`, bobX+velX*vs+10, bobY+velY*vs);
+    }
+
+    // Pivot
+    ctx.fillStyle = '#1a2234'; ctx.beginPath(); ctx.arc(pivotX, pivotY, 12, 0, 6.28); ctx.fill();
+    ctx.strokeStyle = '#0080ff'; ctx.lineWidth=3; ctx.stroke();
+
+    // Bob
+    const gr = ctx.createRadialGradient(bobX, bobY, 0, bobX, bobY, 35);
+    gr.addColorStop(0, '#00ff88'); gr.addColorStop(1, 'rgba(0,255,136,0)');
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(bobX, bobY, 35, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#00ff88'; ctx.shadowBlur=15; ctx.shadowColor='#00ff88';
+    ctx.beginPath(); ctx.arc(bobX, bobY, 20, 0, 6.28); ctx.fill(); ctx.shadowBlur=0;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(bobX+30, bobY-30, 130, 55);
+    ctx.strokeStyle = '#00ff88'; ctx.lineWidth=1; ctx.strokeRect(bobX+30, bobY-30, 130, 55);
+    ctx.fillStyle = '#e8f4ff'; ctx.font = 'bold 11px IBM Plex Mono'; ctx.fillText('Pendulum Bob', bobX+35, bobY-13);
+    ctx.font = '10px IBM Plex Mono';
+    ctx.fillText(`L: ${(length/100).toFixed(2)} m`, bobX+35, bobY);
+    ctx.fillText(`t: ${t.toFixed(2)} s`, bobX+35, bobY+13);
+
+    ctx.strokeStyle = 'rgba(255,170,0,0.3)'; ctx.lineWidth=2; ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.moveTo(pivotX, pivotY); ctx.lineTo(pivotX, pivotY+length); ctx.stroke();
+    ctx.setLineDash([]);
+}
+
+function drawLinearMotion() {
+    const t = simulationData.time;
+    const a = simulationData.accel || 2;
+    const v = a * t, x = 0.5 * a * t * t;
+    const scale = 6, startX = 100, trackY = canvas.height / 2;
+    const posX = startX + x * scale;
+
+    ctx.strokeStyle = 'rgba(143,163,191,0.5)'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(50, trackY); ctx.lineTo(canvas.width-50, trackY); ctx.stroke();
+
+    ctx.fillStyle='#8fa3bf'; ctx.font='11px IBM Plex Mono';
+    for (let i=0; i<=200; i+=20) {
+        const mx = startX + i * scale;
+        if (mx < canvas.width-50) {
+            ctx.fillText(i, mx-8, trackY+25);
+            ctx.strokeStyle='rgba(143,163,191,0.3)'; ctx.lineWidth=1;
+            ctx.beginPath(); ctx.moveTo(mx,trackY-5); ctx.lineTo(mx,trackY+5); ctx.stroke();
+        }
+    }
+
+    ctx.strokeStyle='rgba(0,255,136,0.2)'; ctx.lineWidth=4;
+    ctx.beginPath();
+    for (let i=0; i<=t; i+=0.1) {
+        const px = startX + 0.5 * a * i * i * scale;
+        if (px < canvas.width-50) { if(i===0) ctx.moveTo(px,trackY); else ctx.lineTo(px,trackY); }
+    }
+    ctx.stroke();
+
+    if (posX < canvas.width - 100) {
+        const vs=5;
+        ctx.strokeStyle='#ff00ff'; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.moveTo(posX,trackY); ctx.lineTo(posX+v*vs,trackY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(posX+v*vs,trackY); ctx.lineTo(posX+v*vs-12,trackY-6); ctx.lineTo(posX+v*vs-12,trackY+6); ctx.closePath();
+        ctx.fillStyle='#ff00ff'; ctx.fill();
+        ctx.fillStyle='#ff00ff'; ctx.font='bold 12px IBM Plex Mono'; ctx.fillText(`v=${v.toFixed(1)} m/s`, posX+v*vs+10, trackY-10);
+
+        const gr = ctx.createRadialGradient(posX,trackY,0,posX,trackY,35);
+        gr.addColorStop(0,'#00ff88'); gr.addColorStop(1,'rgba(0,255,136,0)');
+        ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(posX,trackY,35,0,6.28); ctx.fill();
+        ctx.fillStyle='#00ff88'; ctx.shadowBlur=20; ctx.shadowColor='#00ff88';
+        ctx.beginPath(); ctx.arc(posX,trackY,20,0,6.28); ctx.fill(); ctx.shadowBlur=0;
+
+        ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(posX-55,trackY-80,110,65);
+        ctx.strokeStyle='#00ff88'; ctx.lineWidth=1; ctx.strokeRect(posX-55,trackY-80,110,65);
+        ctx.fillStyle='#e8f4ff'; ctx.font='bold 11px IBM Plex Mono'; ctx.fillText('Object', posX-45, trackY-60);
+        ctx.font='10px IBM Plex Mono';
+        ctx.fillText(`x: ${x.toFixed(1)} m`, posX-45, trackY-45);
+        ctx.fillText(`v: ${v.toFixed(2)} m/s`, posX-45, trackY-32);
+        ctx.fillText(`t: ${t.toFixed(2)} s`, posX-45, trackY-19);
+    } else {
+        simulationData.time = 0;
+    }
+}
+
+function drawCollision() {
+    const t = simulationData.time;
+    const m1 = Math.max(0.1, simulationData.mass1 || 2);
+    const m2 = Math.max(0.1, simulationData.mass2 || 3);
+    const u1 = simulationData.velocity1 || 5;
+    const u2 = simulationData.velocity2 || -2;
+    const totalMass = m1 + m2;
+    if (totalMass === 0) return; // guard division by zero
+
+    const collT = u1 > 0 ? Math.abs((canvas.width/2 - 150) / (u1 * 20)) : 2;
+    if (!isFinite(collT) || collT <= 0) { simulationData.time = 0; return; }
+
+    const v1f = ((m1-m2)*u1 + 2*m2*u2) / totalMass;
+    const v2f = ((m2-m1)*u2 + 2*m1*u1) / totalMass;
+    if (!isFinite(v1f) || !isFinite(v2f)) { simulationData.time = 0; return; }
+
+    let pos1, pos2, cv1, cv2;
+    if (t < collT) {
+        cv1 = u1; cv2 = u2;
+        pos1 = 150 + u1*t*20; pos2 = canvas.width-150 + u2*t*20;
+    } else {
+        cv1 = v1f; cv2 = v2f;
+        const cx = 150 + u1*collT*20;
+        pos1 = cx + v1f*(t-collT)*20; pos2 = cx + v2f*(t-collT)*20;
+    }
+
+    const trackY = canvas.height / 2;
+    ctx.strokeStyle = 'rgba(143,163,191,0.5)'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(50,trackY); ctx.lineTo(canvas.width-50,trackY); ctx.stroke();
+
+    ctx.strokeStyle='rgba(255,170,0,0.5)'; ctx.lineWidth=2; ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.moveTo(canvas.width/2,trackY-40); ctx.lineTo(canvas.width/2,trackY+40); ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (pos1<30||pos1>canvas.width-30||pos2<30||pos2>canvas.width-30) { simulationData.time=0; return; }
+
+    const s1 = Math.sqrt(m1)*10, s2 = Math.sqrt(m2)*10;
+    // Ball 1
+    const g1 = ctx.createRadialGradient(pos1,trackY,0,pos1,trackY,s1+15);
+    g1.addColorStop(0,'#00ff88'); g1.addColorStop(1,'rgba(0,255,136,0)');
+    ctx.fillStyle=g1; ctx.beginPath(); ctx.arc(pos1,trackY,s1+15,0,6.28); ctx.fill();
+    ctx.fillStyle='#00ff88'; ctx.shadowBlur=15; ctx.shadowColor='#00ff88';
+    ctx.beginPath(); ctx.arc(pos1,trackY,s1,0,6.28); ctx.fill(); ctx.shadowBlur=0;
+
+    if (Math.abs(cv1)>0.1) {
+        const vs=8; ctx.strokeStyle='#ff00ff'; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.moveTo(pos1,trackY); ctx.lineTo(pos1+cv1*vs,trackY); ctx.stroke();
+        const ad=cv1>0?1:-1;
+        ctx.beginPath(); ctx.moveTo(pos1+cv1*vs,trackY); ctx.lineTo(pos1+cv1*vs-10*ad,trackY-5); ctx.lineTo(pos1+cv1*vs-10*ad,trackY+5); ctx.closePath();
+        ctx.fillStyle='#ff00ff'; ctx.fill();
+    }
+
+    ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(pos1-50,trackY-80,100,60);
+    ctx.strokeStyle='#00ff88'; ctx.lineWidth=1; ctx.strokeRect(pos1-50,trackY-80,100,60);
+    ctx.fillStyle='#e8f4ff'; ctx.font='bold 11px IBM Plex Mono'; ctx.fillText('Object 1', pos1-40, trackY-62);
+    ctx.font='10px IBM Plex Mono';
+    ctx.fillText(`m: ${m1} kg`, pos1-40, trackY-48);
+    ctx.fillText(`v: ${cv1.toFixed(2)} m/s`, pos1-40, trackY-35);
+    ctx.fillText(`p: ${(m1*cv1).toFixed(1)} kg·m/s`, pos1-40, trackY-22);
+
+    // Ball 2
+    const g2 = ctx.createRadialGradient(pos2,trackY,0,pos2,trackY,s2+15);
+    g2.addColorStop(0,'#0080ff'); g2.addColorStop(1,'rgba(0,128,255,0)');
+    ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(pos2,trackY,s2+15,0,6.28); ctx.fill();
+    ctx.fillStyle='#0080ff'; ctx.shadowBlur=15; ctx.shadowColor='#0080ff';
+    ctx.beginPath(); ctx.arc(pos2,trackY,s2,0,6.28); ctx.fill(); ctx.shadowBlur=0;
+
+    if (Math.abs(cv2)>0.1) {
+        const vs=8; ctx.strokeStyle='#ff00ff'; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.moveTo(pos2,trackY); ctx.lineTo(pos2+cv2*vs,trackY); ctx.stroke();
+        const ad=cv2>0?1:-1;
+        ctx.beginPath(); ctx.moveTo(pos2+cv2*vs,trackY); ctx.lineTo(pos2+cv2*vs-10*ad,trackY-5); ctx.lineTo(pos2+cv2*vs-10*ad,trackY+5); ctx.closePath();
+        ctx.fillStyle='#ff00ff'; ctx.fill();
+    }
+
+    ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(pos2-50,trackY+30,100,60);
+    ctx.strokeStyle='#0080ff'; ctx.lineWidth=1; ctx.strokeRect(pos2-50,trackY+30,100,60);
+    ctx.fillStyle='#e8f4ff'; ctx.font='bold 11px IBM Plex Mono'; ctx.fillText('Object 2', pos2-40, trackY+48);
+    ctx.font='10px IBM Plex Mono';
+    ctx.fillText(`m: ${m2} kg`, pos2-40, trackY+62);
+    ctx.fillText(`v: ${cv2.toFixed(2)} m/s`, pos2-40, trackY+75);
+    ctx.fillText(`p: ${(m2*cv2).toFixed(1)} kg·m/s`, pos2-40, trackY+88);
+
+    const totP = m1*cv1+m2*cv2, totKE = 0.5*m1*cv1*cv1+0.5*m2*cv2*cv2;
+    ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(50,30,200,80);
+    ctx.strokeStyle='#ffaa00'; ctx.lineWidth=2; ctx.strokeRect(50,30,200,80);
+    ctx.fillStyle='#ffaa00'; ctx.font='bold 12px IBM Plex Mono'; ctx.fillText('Conservation', 60,50);
+    ctx.fillStyle='#e8f4ff'; ctx.font='11px IBM Plex Mono';
+    ctx.fillText(`p = ${totP.toFixed(2)} kg·m/s`, 60, 68);
+    ctx.fillText(`KE = ${totKE.toFixed(2)} J`, 60, 84);
+    ctx.fillText(t<collT?'Before Collision':'After Collision', 60, 100);
+}
+
+function drawSpring() {
+    const t = simulationData.time;
+    const k = Math.max(0.01, simulationData.springConstant || 100);
+    const m = Math.max(0.01, simulationData.mass || 2);
+    const A = Math.max(0.001, simulationData.amplitude || 0.2);
+    const omega = Math.sqrt(k / m);
+    if (!isFinite(omega) || omega === 0) return; // safety guard
+    const x = A * Math.cos(omega * t);
+    const v = -A * omega * Math.sin(omega * t);
+    const centerX = canvas.width/2, centerY = canvas.height/2;
+    const scale = 200, blockX = centerX + x * scale;
+
+    ctx.fillStyle='#1a2234'; ctx.fillRect(50,centerY-100,20,200);
+    ctx.strokeStyle='#00ff88'; ctx.lineWidth=3; ctx.strokeRect(50,centerY-100,20,200);
+
+    // Spring
+    ctx.strokeStyle='#0080ff'; ctx.lineWidth=3;
+    ctx.beginPath();
+    const ss=70, se=blockX-30, sl=se-ss, coils=15, ch=20;
+    ctx.moveTo(ss, centerY);
+    for (let i=0; i<=coils; i++) {
+        const xp=ss+(sl/coils)*i, yp=centerY+(i%2===0?-ch:ch);
+        ctx.lineTo(xp, yp);
+    }
+    ctx.lineTo(se, centerY); ctx.stroke();
+
+    // Block
+    const bs=40;
+    ctx.fillStyle='#00ff88'; ctx.shadowBlur=20; ctx.shadowColor='#00ff88';
+    ctx.fillRect(blockX-bs/2,centerY-bs/2,bs,bs); ctx.shadowBlur=0;
+    ctx.strokeStyle='#e8f4ff'; ctx.lineWidth=2; ctx.strokeRect(blockX-bs/2,centerY-bs/2,bs,bs);
+
+    if (Math.abs(v)>0.01) {
+        const vs=100; ctx.strokeStyle='#ff00ff'; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.moveTo(blockX,centerY); ctx.lineTo(blockX+v*vs,centerY); ctx.stroke();
+        const ad=v>0?1:-1;
+        ctx.beginPath(); ctx.moveTo(blockX+v*vs,centerY); ctx.lineTo(blockX+v*vs-10*ad,centerY-5); ctx.lineTo(blockX+v*vs-10*ad,centerY+5); ctx.closePath();
+        ctx.fillStyle='#ff00ff'; ctx.fill();
+        ctx.fillStyle='#ff00ff'; ctx.font='bold 11px IBM Plex Mono';
+        ctx.fillText(`v=${v.toFixed(3)} m/s`, blockX+v*vs+10, centerY-10);
+    }
+
+    ctx.strokeStyle='rgba(255,170,0,0.3)'; ctx.lineWidth=2; ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.moveTo(centerX,centerY-60); ctx.lineTo(centerX,centerY+60); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#ffaa00'; ctx.font='10px IBM Plex Mono'; ctx.fillText('Equilibrium', centerX+10, centerY-70);
+
+    ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(blockX-60,centerY+60,130,70);
+    ctx.strokeStyle='#00ff88'; ctx.lineWidth=1; ctx.strokeRect(blockX-60,centerY+60,130,70);
+    ctx.fillStyle='#e8f4ff'; ctx.font='bold 11px IBM Plex Mono'; ctx.fillText('Spring-Mass', blockX-50, centerY+78);
+    ctx.font='10px IBM Plex Mono';
+    ctx.fillText(`x: ${x.toFixed(3)} m`, blockX-50, centerY+93);
+    ctx.fillText(`t: ${t.toFixed(2)} s`, blockX-50, centerY+108);
+    ctx.fillText(`F: ${(-k*x).toFixed(1)} N`, blockX-50, centerY+123);
+}
+
+function drawIncline() {
+    const t = simulationData.time;
+    const angleDeg = Math.min(89, Math.max(1, simulationData.inclineAngle || 30));
+    const angle = angleDeg * Math.PI / 180;
+    const m = Math.max(0.1, simulationData.mass || 5);
+    const g = Math.max(0.1, simulationData.gravity || 9.8);
+    const a = g * Math.sin(angle);
+    if (!isFinite(a)) return;
+    const s = 0.5 * a * t * t;
+    const isx = 150, isy = 150, il = 400;
+    const bx = isx + s * Math.cos(angle) * 3, by = isy + s * Math.sin(angle) * 3;
+
+    ctx.fillStyle='#1a2234'; ctx.beginPath();
+    ctx.moveTo(isx,isy);
+    ctx.lineTo(isx+il*Math.cos(angle), isy+il*Math.sin(angle));
+    ctx.lineTo(isx+il*Math.cos(angle), canvas.height-50);
+    ctx.lineTo(isx, canvas.height-50); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#00ff88'; ctx.lineWidth=3; ctx.stroke();
+
+    ctx.strokeStyle='#0080ff'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(isx, canvas.height-50, 60, -Math.PI/2, -Math.PI/2+angle); ctx.stroke();
+    ctx.fillStyle='#0080ff'; ctx.font='bold 12px IBM Plex Mono';
+    ctx.fillText(`${simulationData.inclineAngle}°`, isx+70, canvas.height-60);
+
+    if (by < canvas.height - 100) {
+        ctx.save(); ctx.translate(bx, by); ctx.rotate(angle);
+        ctx.fillStyle='#00ff88'; ctx.shadowBlur=20; ctx.shadowColor='#00ff88';
+        ctx.fillRect(-15,-15,30,30); ctx.shadowBlur=0;
+        ctx.strokeStyle='#e8f4ff'; ctx.lineWidth=2; ctx.strokeRect(-15,-15,30,30);
+        ctx.restore();
+
+        const v = a * t;
+        if (v > 0.1) {
+            ctx.strokeStyle='#ff00ff'; ctx.lineWidth=3;
+            ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx+v*Math.cos(angle)*5, by+v*Math.sin(angle)*5); ctx.stroke();
+        }
+
+        ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(bx+40,by-40,120,70);
+        ctx.strokeStyle='#00ff88'; ctx.lineWidth=1; ctx.strokeRect(bx+40,by-40,120,70);
+        ctx.fillStyle='#e8f4ff'; ctx.font='bold 11px IBM Plex Mono'; ctx.fillText('Block', bx+50, by-22);
+        ctx.font='10px IBM Plex Mono';
+        ctx.fillText(`m: ${m} kg`, bx+50, by-7);
+        ctx.fillText(`v: ${v.toFixed(2)} m/s`, bx+50, by+8);
+        ctx.fillText(`s: ${s.toFixed(2)} m`, bx+50, by+23);
+    } else {
+        simulationData.time = 0;
+    }
+}
+
+function drawFreeFall() {
+    const t = simulationData.time;
+    const h0 = Math.max(1, simulationData.height || 50);
+    const g = Math.max(0.1, simulationData.gravity || 9.8);
+    const y = h0 - 0.5 * g * t * t, v = g * t;
+    const cx = canvas.width/2;
+    // Adaptive scale so tall heights still fit in canvas
+    const availH = canvas.height - 160;
+    const scale = Math.min(8, availH / h0);
+    const groundY = canvas.height-50, startY = 100;
+    const curY = startY + (h0-y)*scale;
+    if (!isFinite(curY)) return;
+
+    ctx.strokeStyle='rgba(143,163,191,0.5)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(cx-100,startY); ctx.lineTo(cx-100,groundY); ctx.stroke();
+
+    ctx.fillStyle='#8fa3bf'; ctx.font='11px IBM Plex Mono';
+    for (let i=0; i<=h0; i+=10) {
+        const my = startY+i*scale;
+        if (my < groundY) {
+            ctx.fillText(`${h0-i}m`, cx-140, my+5);
+            ctx.strokeStyle='rgba(143,163,191,0.2)'; ctx.lineWidth=1;
+            ctx.beginPath(); ctx.moveTo(cx-105,my); ctx.lineTo(cx-95,my); ctx.stroke();
+        }
+    }
+
+    if (y > 0 && curY < groundY) {
+        ctx.strokeStyle='rgba(0,255,136,0.2)'; ctx.lineWidth=4;
+        ctx.beginPath();
+        for (let i=0; i<=t; i+=0.05) {
+            const ty = h0 - 0.5*g*i*i;
+            const py = startY + (h0-ty)*scale;
+            if (ty > 0) { if(i===0) ctx.moveTo(cx,py); else ctx.lineTo(cx,py); }
+        }
+        ctx.stroke();
+
+        if (v > 0.5) {
+            const vs=3; ctx.strokeStyle='#ff00ff'; ctx.lineWidth=3;
+            ctx.beginPath(); ctx.moveTo(cx,curY); ctx.lineTo(cx,curY+v*vs); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx,curY+v*vs); ctx.lineTo(cx-8,curY+v*vs-12); ctx.lineTo(cx+8,curY+v*vs-12); ctx.closePath();
+            ctx.fillStyle='#ff00ff'; ctx.fill();
+            ctx.fillStyle='#ff00ff'; ctx.font='bold 12px IBM Plex Mono';
+            ctx.fillText(`v=${v.toFixed(2)} m/s`, cx+40, curY+v*vs);
+        }
+
+        const gr = ctx.createRadialGradient(cx,curY,0,cx,curY,30);
+        gr.addColorStop(0,'#00ff88'); gr.addColorStop(1,'rgba(0,255,136,0)');
+        ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(cx,curY,30,0,6.28); ctx.fill();
+        ctx.fillStyle='#00ff88'; ctx.shadowBlur=20; ctx.shadowColor='#00ff88';
+        ctx.beginPath(); ctx.arc(cx,curY,18,0,6.28); ctx.fill(); ctx.shadowBlur=0;
+
+        ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(cx+50,curY-40,130,70);
+        ctx.strokeStyle='#00ff88'; ctx.lineWidth=1; ctx.strokeRect(cx+50,curY-40,130,70);
+        ctx.fillStyle='#e8f4ff'; ctx.font='bold 11px IBM Plex Mono'; ctx.fillText('Falling Object', cx+60, curY-22);
+        ctx.font='10px IBM Plex Mono';
+        ctx.fillText(`h: ${y.toFixed(2)} m`, cx+60, curY-7);
+        ctx.fillText(`t: ${t.toFixed(2)} s`, cx+60, curY+8);
+        ctx.fillText(`v: ${v.toFixed(2)} m/s`, cx+60, curY+23);
+    } else {
+        simulationData.time = 0;
+    }
+}
+</script>
+</body>
+</html>
