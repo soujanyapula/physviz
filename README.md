@@ -33,6 +33,7 @@ For AI-powered problem parsing, the app makes a direct `fetch` call to the **Ant
 PhysViz has **zero npm or pip dependencies**. There is no `package.json` and no `node_modules` folder. The only external resources the app loads at runtime are the **Anthropic Claude API** (called via `fetch` for AI parsing) and **Google Fonts** (loaded via a CDN `<link>` tag for typography). Fonts are purely cosmetic — the app still works if they fail to load. The Claude API call, however, is required for the AI parsing feature to function.
 
 **⚠️ Important Instructions:-**
+
 **🌐 Internet Connection:-**
 
 An active internet connection is required to load Google Fonts and — more importantly — to call the Anthropic Claude API. The app will not be able to parse physics problems in offline mode.
@@ -48,26 +49,35 @@ The app works fully on **Chrome 90+, Firefox 88+, Edge 90+, and Safari 14+**. In
 **🎮 Supported Simulation Types:-**
 **PhysViz can detect and animate 8 types of physics scenarios:**
 
-**1)Vertical Projectile Motion
+1)Vertical Projectile Motion
+
 2)Angled Projectile Motion
+
 3)Linear Motion
+
 4)Simple Pendulum
+
 5)Inclined Plane
+
 6)Spring-Mass Oscillation
+
 7)Free Fall
-8)Elastic Collision**
+
+8)Elastic Collision
 
 **Each simulation shows:**
 
-**1)Live velocity vectors
+1)Live velocity vectors
+
 2)Real-time values
-3)Governing equations**
+
+3)Governing equations
 
 PhysViz can detect and animate **8 types of physics scenarios** from plain English input. These are: **Vertical Projectile Motion** (e.g. a ball thrown straight up), **Angled Projectile Motion** (trajectory with X and Y components), **Linear Motion** (objects with constant acceleration), **Simple Pendulum** (oscillation with period and angle), **Inclined Plane** (block sliding down a slope), **Spring-Mass Oscillation** (Hooke's Law animation), **Free Fall** (object dropped from height), and **Elastic Collision** (two-body momentum and energy conservation). Each simulation shows live velocity vectors, real-time values, and the relevant governing equations.
 
 **🎬 Demo Videos of MVP:-**
 
-- Full Walkthrough:-** https://drive.google.com/file/d/12irau5C22SXBzZBSI-Ty_w-IirvPm2Km/view?usp=sharing**
+- Full Walkthrough:- https://drive.google.com/file/d/12irau5C22SXBzZBSI-Ty_w-IirvPm2Km/view?usp=sharing
 
 **📁 Project Structure:-**
 
